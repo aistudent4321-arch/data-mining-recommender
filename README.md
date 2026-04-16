@@ -1,181 +1,191 @@
-# 🍽️ Restaurant Recommendation System – Project Summary
+# 🍽️ Restaurant Recommendation System
 
-This project builds a complete recommendation system for a restaurant using multiple data mining and machine learning techniques.
+This project builds a **hybrid recommendation system** for a restaurant using a combination of:
+
+* Data Mining techniques
+* Statistical analysis
+* Collaborative filtering
+* Deep learning (Transformer model)
+
+The goal is to predict the **Top-10 items** for each user request.
 
 ---
 
-## 📊 Data Processing
+# 🧠 Project Idea
 
-In this stage, the raw data is cleaned and transformed into a usable format:
+Instead of relying on a single model, this system combines multiple approaches:
 
-* **Timestamp parsing**: Convert string dates into datetime objects
-* **Sorting**: Order all data chronologically
-* **Duplicate removal**: Remove repeated rows
-* **Feature engineering**:
+👉 Traditional methods (rules + similarity + CF)
+👉 Statistical insights (context + time)
+👉 Deep learning (Transformer)
+
+All signals are combined into a **final scoring system**.
+
+---
+
+# ⚙️ Full Pipeline
+
+```
+Raw Data
+   ↓
+Data Preprocessing
+   ↓
+Feature Engineering + Recency Weights
+   ↓
+Time-Based Split (Train / Validation)
+   ↓
+Signal Generation (Multiple Models)
+   ↓
+Scoring & Ranking System
+   ↓
+Top-10 Predictions
+   ↓
+Evaluation (NDCG@10)
+```
+
+---
+
+# 📊 Data Processing
+
+* Convert timestamps to datetime
+* Sort data chronologically
+* Remove duplicates
+* Extract features:
 
   * hour
   * day_of_week
   * is_weekend
   * meal_period
-* **Basket parsing**: Convert strings like `WRAP001|SAUCE001` into lists
-* **Recency weighting**:
+* Parse baskets into lists
+* Apply **recency weighting**:
 
-  * Formula: exponential decay
-  * Recent interactions are more important
-* **Time-based split**:
-
-  * Last 10% of data used for validation
+  * recent orders = higher importance
 
 ---
 
-## 🗃️ Data Representation
+# 🗃️ Data Representation
 
-Different matrices were built to represent user behavior:
+* Frequency Matrix (user × item)
+* Recency-weighted Matrix
+* Binary Matrix
+* User vectors representing:
 
-* **Frequency matrix**: How many times a user bought each item
-* **Recency-weighted matrix**: Gives higher importance to recent purchases
-* **Binary matrix**: 1 if user bought item, 0 otherwise
-* **User vectors**:
-
-  * Average price
-  * Food preferences
-  * Meal behavior
-  * Category ratios
+  * preferences
+  * behavior
+  * meal patterns
 
 ---
 
-## 📐 Similarity Methods
+# 📐 Similarity & Relationships
 
-Used to find relationships between items and users:
-
-* **Cosine similarity (item-item)**: Based on co-purchase behavior
-* **Jaccard similarity (item-item)**: Based on binary overlap
-* **Cosine similarity (user-user)**: Based on behavioral features
+* Item-item similarity (Cosine + Jaccard)
+* User-user similarity
+* Item relationships based on co-purchases
 
 ---
 
-## 🤝 Collaborative Filtering
+# 🤝 Collaborative Filtering
 
-Two types of recommendation methods:
-
-* **Item-based CF**:
-
-  * Recommends items similar to what the user already bought
-* **User-based CF**:
-
-  * Finds similar users and recommends what they liked
+* Item-based CF → recommends similar items
+* User-based CF → recommends from similar users
 
 ---
 
-## 📦 Frequent Pattern Mining
+# 📦 Pattern Mining
 
-Used to discover patterns in baskets:
+* FP-Growth to find frequent itemsets
+* Association rules:
 
-* **FP-Growth algorithm**:
-
-  * Finds frequently purchased item combinations
-* **Association rules**:
-
-  * Example: `{burger, fries} → drink`
-  * Uses:
-
-    * support
-    * confidence
-    * lift
-* **Closed itemsets**:
-
-  * Removes redundant patterns
-* **Maximal itemsets**:
-
-  * Keeps only strongest patterns
+  * Example: `{wrap, fries} → drink`
+* Closed & maximal itemsets to reduce noise
 
 ---
 
-## 📈 Statistical Analysis
+# 📈 Statistical Insights
 
-Used to understand relationships in the data:
+* Chi-square test → detects relationships
+* Correlation analysis
+* Context-based popularity:
 
-* **Chi-square test**:
-
-  * Tests relationships between:
-
-    * meal_period
-    * hour
-    * weekend
-* **Correlation analysis**:
-
-  * Measures relationships (e.g., price vs time)
-* **Context popularity**:
-
-  * Popular items per meal period
-* **Weekend popularity**:
-
-  * Different behavior on weekends
+  * meal period
+  * weekend vs weekday
 
 ---
 
-## 🧠 Deep Learning Model (Transformer)
+# 🤖 Deep Learning Model
 
-A BERT-style model was used to predict missing items in a basket:
+Masked Basket Transformer (BERT-style):
 
-* Embedding layer (128 dimensions)
-* Positional encoding
-* Transformer Encoder (2 layers)
-* Multi-head self-attention
-* Context tokens (e.g., `<LUNCH>`, `<WEEKEND>`)
-* Multi-mask training
-* Label smoothing
-* Gradient clipping
-* Learning rate scheduler
-* Early stopping
+* Learns relationships inside baskets
+* Predicts missing items
+* Uses:
+
+  * embeddings
+  * self-attention
+  * contextual tokens
 
 ---
 
-## 🎯 Scoring & Ranking System
+# 🎯 Scoring System
 
-All models are combined into one final recommendation system:
+All models are combined into a final score:
 
-* **Normalization**:
+* Transformer
+* Item similarity
+* Collaborative filtering
+* Association rules
+* Context popularity
+* Recency
 
-  * Softmax (for dense signals)
-  * Min-max (for sparse signals)
-* **Weighted ensemble**:
+### Process:
 
-  * Combines multiple signals:
-
-    * transformer
-    * similarity
-    * collaborative filtering
-    * association rules
-    * popularity
-    * recency
-* **Basket bonus**:
-
-  * Adds score if rule matches basket
-* **Two-stage pipeline**:
-
-  1. Generate top 20 candidates
-  2. Re-rank using transformer
+1. Generate candidate items
+2. Score them using multiple signals
+3. Re-rank using Transformer
 
 ---
 
-## 📏 Evaluation
+# 📏 Evaluation
 
-* Metric used: **NDCG@10**
-* Measures ranking quality (higher = better)
+Metric used:
+
+👉 **NDCG@10**
+
+Measures ranking quality — higher is better.
 
 ---
 
-## 🚀 Final Idea
+# 📊 Results
 
-This system does NOT rely on a single model.
+* Baseline: **0.6441**
+* Best validation: **0.7429**
+* Best leaderboard: **0.7449**
+* Latest submission: **0.7302**
 
-Instead, it combines:
+---
 
-* Traditional methods (rules, similarity, CF)
-* Statistical analysis
-* Deep learning (Transformer)
+# 💡 Key Insight
 
-👉 The final performance depends on how well these components are combined.
+The performance improvement comes from:
+
+👉 Combining multiple models
+👉 Not relying on a single method
+
+---
+
+# 🚀 How to Run
+
+1. Open the notebook in Jupyter
+2. Place all CSV files in the same folder
+3. Run cells in order
+4. Generate submission file
+
+---
+
+# 👩‍💻 Notes
+
+* The system uses **implicit feedback** (no ratings)
+* Recency plays a major role
+* Ensemble weighting is critical for performance
 
 ---
