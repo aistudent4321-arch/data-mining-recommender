@@ -1,191 +1,342 @@
-# 🍽️ Restaurant Recommendation System
+# Restaurant Recommendation System
 
-This project builds a **hybrid recommendation system** for a restaurant using a combination of:
+## Overview
 
-* Data Mining techniques
-* Statistical analysis
-* Collaborative filtering
-* Deep learning (Transformer model)
+This project was developed for the AI306 Data Mining Restaurant Recommendation Challenge.
 
-The goal is to predict the **Top-10 items** for each user request.
+The objective is to predict the next item a customer is most likely to add to their current basket and generate a ranked Top-10 recommendation list.
 
----
-
-# 🧠 Project Idea
-
-Instead of relying on a single model, this system combines multiple approaches:
-
-👉 Traditional methods (rules + similarity + CF)
-👉 Statistical insights (context + time)
-👉 Deep learning (Transformer)
-
-All signals are combined into a **final scoring system**.
+The final solution uses a LightGBM LambdaRank learning-to-rank model combined with extensive feature engineering, dynamic user-history modeling, contextual popularity statistics, and a 5-seed ensemble.
 
 ---
 
-# ⚙️ Full Pipeline
+#  Competition Results
 
+| Metric                 | Score      |
+| ---------------------- | ---------- |
+| Best Private Score     | **0.7866** |
+| Best Public Score      | **0.7780** |
+| Final Leaderboard Rank | **#2**     |
+
+---
+
+# Problem Statement
+
+Given:
+
+* User information
+* Current basket items
+* Temporal context (meal period, hour, weekend)
+
+The system predicts which menu item the customer is most likely to add next.
+
+This is formulated as a **Learning-to-Rank (LTR)** problem rather than a classification problem.
+
+For every basket, the model ranks all candidate menu items and returns the Top-10 recommendations.
+
+The competition evaluation metric is **NDCG@10**.
+
+---
+
+# Dataset
+
+The project uses five datasets:
+
+| File                   | Description                        |
+| ---------------------- | ---------------------------------- |
+| train_transactions.csv | Transaction-level purchase history |
+| train_baskets.csv      | Basket-level order data            |
+| train_users.csv        | User metadata                      |
+| menu_items.csv         | Menu catalog containing 50 items   |
+| test_instances.csv     | Competition prediction instances   |
+
+Dataset period:
+
+* Training: January 2024 – July 2025
+* Testing: July 2025 – September 2025
+
+The menu contains:
+
+* 50 items
+* 9 categories
+
+Including:
+
+* Wraps
+* Plates
+* Highlanders
+* Appetizers
+* Salads
+* Sides
+* Beverages
+* Sauces
+* Desserts
+
+---
+
+# Model
+
+## LightGBM LambdaRank
+
+The final solution uses LightGBM with the LambdaRank objective.
+
+LambdaRank is specifically designed for ranking tasks and directly optimizes NDCG during training.
+
+Why LambdaRank?
+
+* Competition metric is NDCG@10
+* Output is a ranked list, not a class label
+* Ranking quality matters more than classification accuracy
+
+Why LightGBM?
+
+* Fast training
+* Handles large feature sets efficiently
+* Built-in LambdaRank support
+* Strong performance on tabular data
+
+---
+
+# Hyperparameters
+
+```python
+LGBM_PARAMS = {
+    "objective": "lambdarank",
+    "metric": "ndcg",
+    "ndcg_eval_at": [10],
+    "boosting_type": "gbdt",
+    "learning_rate": 0.05,
+    "num_leaves": 63,
+    "min_data_in_leaf": 200,
+    "feature_fraction": 0.85,
+    "bagging_fraction": 0.85,
+    "bagging_freq": 5,
+    "lambda_l2": 1.0,
+    "label_gain": [0, 1]
+}
 ```
-Raw Data
-   ↓
-Data Preprocessing
-   ↓
-Feature Engineering + Recency Weights
-   ↓
-Time-Based Split (Train / Validation)
-   ↓
-Signal Generation (Multiple Models)
-   ↓
-Scoring & Ranking System
-   ↓
-Top-10 Predictions
-   ↓
-Evaluation (NDCG@10)
+
+Additional settings:
+
+```python
+ENSEMBLE_SEEDS = [1337, 2024, 314159, 7, 42]
+NUM_BOOST_ROUND = 3000
+EARLY_STOPPING = 150
+RECENCY_HALFLIFE_DAYS = 60
 ```
 
 ---
 
-# 📊 Data Processing
+# Feature Engineering
 
-* Convert timestamps to datetime
-* Sort data chronologically
-* Remove duplicates
-* Extract features:
+The system uses approximately 90 engineered features.
 
-  * hour
-  * day_of_week
-  * is_weekend
-  * meal_period
-* Parse baskets into lists
-* Apply **recency weighting**:
+Feature groups include:
 
-  * recent orders = higher importance
+### Item Features
 
----
+* Price
+* Calories
+* Popularity weight
+* Category
+* Protein type
+* Vegetarian / Vegan / Spicy flags
 
-# 🗃️ Data Representation
+### Context Popularity Features
 
-* Frequency Matrix (user × item)
-* Recency-weighted Matrix
-* Binary Matrix
-* User vectors representing:
+* Global popularity
+* Meal-period popularity
+* Day-of-week popularity
+* Hour-bucket popularity
+* Weekend popularity
 
-  * preferences
-  * behavior
-  * meal patterns
+### User History Features
 
----
+* Purchase counts
+* Recency-weighted counts
+* User preferences
+* Favorite items
+* Purchase frequency
 
-# 📐 Similarity & Relationships
+### Category Preference Features
 
-* Item-item similarity (Cosine + Jaccard)
-* User-user similarity
-* Item relationships based on co-purchases
+* Category affinity
+* Top category
+* Category purchase counts
 
----
+### Last Basket Features
 
-# 🤝 Collaborative Filtering
+* Previously ordered items
+* Basket recurrence
+* Days since last basket
 
-* Item-based CF → recommends similar items
-* User-based CF → recommends from similar users
+### Co-occurrence Features
 
----
-
-# 📦 Pattern Mining
-
-* FP-Growth to find frequent itemsets
-* Association rules:
-
-  * Example: `{wrap, fries} → drink`
-* Closed & maximal itemsets to reduce noise
-
----
-
-# 📈 Statistical Insights
-
-* Chi-square test → detects relationships
-* Correlation analysis
-* Context-based popularity:
-
-  * meal period
-  * weekend vs weekday
-
----
-
-# 🤖 Deep Learning Model
-
-Masked Basket Transformer (BERT-style):
-
-* Learns relationships inside baskets
-* Predicts missing items
-* Uses:
-
-  * embeddings
-  * self-attention
-  * contextual tokens
-
----
-
-# 🎯 Scoring System
-
-All models are combined into a final score:
-
-* Transformer
+* Conditional probabilities
+* Pair counts
+* Log-lift
+* PPMI
 * Item similarity
-* Collaborative filtering
-* Association rules
-* Context popularity
-* Recency
 
-### Process:
+### Collaborative Signals
+
+* Item-based similarity scores
+* User-item interaction signals
+
+### Position Features
+
+* Average item position
+* Relative basket position
+* Basket size
+
+### Basket Composition Features
+
+* Main course indicators
+* Beverage indicators
+* Sauce indicators
+* Add-on indicators
+
+---
+
+# User Modeling
+
+User history is built dynamically for every training and validation sample.
+
+Only baskets that occurred before the sample timestamp are used.
+
+This prevents temporal leakage and ensures realistic recommendation behavior.
+
+The system models:
+
+* User preferences
+* Purchase frequency
+* Recency effects
+* Category preferences
+* Repeat-order behavior
+
+---
+
+# Training Pipeline
+
+```text
+Raw Data
+    ↓
+Data Loading
+    ↓
+Statistics Construction
+    ↓
+User History Building
+    ↓
+Feature Engineering
+    ↓
+Dataset Generation
+    ↓
+LightGBM LambdaRank Training
+    ↓
+Validation
+    ↓
+Ensemble Prediction
+    ↓
+Submission File
+```
+
+Training process:
 
 1. Generate candidate items
-2. Score them using multiple signals
-3. Re-rank using Transformer
+2. Build feature vectors
+3. Create X_train
+4. Create y_train
+5. Create groups_train
+6. Train LightGBM rankers
+7. Ensemble predictions from 5 seeds
+8. Generate Top-10 recommendations
 
 ---
 
-# 📏 Evaluation
+# Evaluation
 
 Metric used:
 
-👉 **NDCG@10**
+## NDCG@10
 
-Measures ranking quality — higher is better.
+Normalized Discounted Cumulative Gain at rank 10.
 
----
+NDCG rewards placing relevant items higher in the recommendation list.
 
-# 📊 Results
+Higher values indicate better ranking quality.
 
-* Baseline: **0.6441**
-* Best validation: **0.7429**
-* Best leaderboard: **0.7449**
-* Latest submission: **0.7302**
+Additional metrics:
 
----
-
-# 💡 Key Insight
-
-The performance improvement comes from:
-
-👉 Combining multiple models
-👉 Not relying on a single method
+* Hit@10
+* Hit@1
 
 ---
 
-# 🚀 How to Run
+# Key Technical Contributions
 
-1. Open the notebook in Jupyter
-2. Place all CSV files in the same folder
-3. Run cells in order
-4. Generate submission file
+The largest performance gains came from:
+
+* Dynamic per-sample user history
+* Context-aware popularity features
+* Triplet conditional probabilities
+* Similar past-basket completion
+* Position-aware features
+* Basket composition features
+* Rank-averaged 5-seed ensemble
+
+---
+
+# Repository Structure
+
+```text
+reco-challenge/
+├── scripts/
+│   ├── run_pipeline.py
+│   └── hp_sweep.py
+├── src/
+│   ├── config.py
+│   ├── data_io.py
+│   ├── stats.py
+│   ├── user_history.py
+│   ├── features.py
+│   ├── dataset_builder.py
+│   ├── ranker.py
+│   └── evaluate.py
+├── outputs/
+├── requirements.txt
+└── README.md
+```
 
 ---
 
-# 👩‍💻 Notes
+# Installation
 
-* The system uses **implicit feedback** (no ratings)
-* Recency plays a major role
-* Ensemble weighting is critical for performance
+```bash
+pip install -r requirements.txt
+```
 
 ---
+
+# Running the Project
+
+```bash
+python scripts/run_pipeline.py
+```
+
+Force rebuild:
+
+```bash
+python scripts/run_pipeline.py --force
+```
+
+---
+
+# Team TSJ
+
+* Tala Mamdouh Khushaym
+* Judy Jamal Farghal
+* Sama Ashraf Osailan
+
+---
+
+AI306 Data Mining Project — Spring 2026
